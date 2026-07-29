@@ -25,6 +25,7 @@ const emptyForm = {
   week: '', sales: '', cattlePurchase: '', laborCost: '', supplyCost: '',
   gradedCattle: '', hospitalCows: '', employees: '', boxWeight: '',
   regHours: '', otHours: '', liveHotYield: '', fabBoxYield: '', liveToBoxYield: '',
+  editPassword: '',
 };
 
 export default function DashboardPage() {
@@ -185,6 +186,7 @@ export default function DashboardPage() {
       liveHotYield: w.liveHotYield != null ? +(w.liveHotYield * 100).toFixed(2) : '',
       fabBoxYield: w.fabBoxYield != null ? +(w.fabBoxYield * 100).toFixed(2) : '',
       liveToBoxYield: w.liveToBoxYield != null ? +(w.liveToBoxYield * 100).toFixed(2) : '',
+      editPassword: '',
     });
     setEditingId(w.id);
     setFormError('');
@@ -379,6 +381,16 @@ export default function DashboardPage() {
                 <Field label="Live→box yield (%)" type="number" value={form.liveToBoxYield} onChange={(v) => updateField('liveToBoxYield', v)} />
               </div>
               <div className="form-note">Profit/loss = sales − cattle purchase − labor − supply. Total hours = regular + overtime, checked against the 1,500 hr/week target.</div>
+              <div className="field" style={{ marginTop: '16px' }}>
+                <label htmlFor="editPassword">Edit password</label>
+                <input
+                  type="password"
+                  id="editPassword"
+                  value={form.editPassword}
+                  onChange={(e) => updateField('editPassword', e.target.value)}
+                  required
+                />
+              </div>
               {formError && <div className="form-error">{formError}</div>}
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
