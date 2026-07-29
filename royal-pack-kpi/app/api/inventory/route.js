@@ -7,6 +7,7 @@ function toCamel(row) {
     product: row.product,
     location: row.location,
     dateLabel: row.date_label,
+    caseCount: row.case_count,
     quantity: row.quantity,
     unit: row.unit,
     createdAt: row.created_at,
@@ -39,6 +40,9 @@ export async function POST(request) {
   const dateLabel = (body.dateLabel || '').trim();
   const quantity = Number(body.quantity);
   const unit = (body.unit || 'lbs').trim() || 'lbs';
+  const caseCount = body.caseCount === '' || body.caseCount === undefined || body.caseCount === null
+    ? null
+    : Number(body.caseCount);
 
   const ALLOWED_LOCATIONS = ['Freezer 1', 'Freezer 2', 'Freezer 3', 'Frontier'];
   if (!product) {
@@ -53,11 +57,14 @@ export async function POST(request) {
   if (isNaN(quantity)) {
     return NextResponse.json({ error: 'Quantity must be a number' }, { status: 400 });
   }
+  if (caseCount !== null && isNaN(caseCount)) {
+    return NextResponse.json({ error: 'Case count must be a number' }, { status: 400 });
+  }
 
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('inventory_snapshots')
-    .insert({ product, location, date_label: dateLabel, quantity, unit })
+    .insert({ product, location, date_label: dateLabel, case_count: caseCount, quantity, unit })
     .select()
     .single();
 
