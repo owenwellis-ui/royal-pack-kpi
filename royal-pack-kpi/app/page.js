@@ -97,15 +97,17 @@ export default function DashboardPage() {
         title: { display: true, text: 'Yield %', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     } else if (activeTab === 'labor') {
       datasets = [
-        { type: 'bar', label: 'Regular Hours', data: weeks.map((w) => w.regHours), backgroundColor: 'rgba(212,175,55,0.55)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
-        { type: 'bar', label: 'Overtime Hours', data: weeks.map((w) => w.otHours), backgroundColor: 'rgba(139,111,44,0.7)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
+        { type: 'bar', label: 'Regular Hours', data: weeks.map((w) => w.regHours), backgroundColor: 'rgba(212,175,55,0.9)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
+        { type: 'bar', label: 'Overtime Hours', data: weeks.map((w) => w.otHours), backgroundColor: 'rgba(242,239,230,0.9)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
         { type: 'line', label: 'Target (1500 hrs)', data: weeks.map(() => 1500), borderColor: '#C06A4A', borderDash: [5, 4], pointRadius: 0, yAxisID: 'y0', borderWidth: 1.5 },
         { type: 'line', label: 'Labor % of Box Weight', data: weeks.map((w) => (w.laborPctBoxWeight != null ? w.laborPctBoxWeight * 100 : null)), borderColor: '#F2EFE6', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' },
+        { type: 'line', label: 'Employees', data: weeks.map((w) => w.employees), borderColor: '#D4AF37', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y2' },
       ];
       scales.y0 = { position: 'left', stacked: true, ticks: { color: tickColor }, grid: { color: gridColor },
         title: { display: true, text: 'Hours', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
       scales.y1 = { position: 'right', ticks: { color: tickColor, callback: (v) => Number(v.toFixed(2)) + '%' }, grid: { display: false },
         title: { display: true, text: 'Labor % of Box Wt', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
+      scales.y2 = { display: false };
     }
 
     chartRef.current = new Chart(ctx, {
