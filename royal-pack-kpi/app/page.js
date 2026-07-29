@@ -78,7 +78,8 @@ export default function DashboardPage() {
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2 },
         { type: 'line', label: 'Cattle Purchase', data: weeks.map((w) => w.cattlePurchase), borderColor: '#7C93A8', backgroundColor: 'transparent',
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2, borderDash: [4, 3] },
-        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent', yAxisID: 'y1', pointRadius: 0, order: 3, borderWidth: 2.5 },
+        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent',
+          yAxisID: 'y1', pointRadius: 0, order: 3, borderWidth: 2.5 },
       ];
       scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => '$' + v / 1000 + 'k' }, grid: { color: gridColor },
         title: { display: true, text: 'Sales / Purchase ($)', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
@@ -161,6 +162,23 @@ export default function DashboardPage() {
   const latest = weeks[weeks.length - 1];
   const prev = weeks.length > 1 ? weeks[weeks.length - 2] : null;
 
+  function sumField(key) {
+    return weeks.reduce((acc, w) => acc + (w[key] || 0), 0);
+  }
+  function avgField(key) {
+    const vals = weeks.map((w) => w[key]).filter((v) => v !== null && v !== undefined && !isNaN(v));
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  }
+  const ytd = {
+    totalSales: sumField('sales'),
+    totalCattlePurchase: sumField('cattlePurchase'),
+    totalLaborSupply: sumField('laborCost') + sumField('supplyCost'),
+    totalProfit: sumField('profit'),
+    avgYield: avgField('liveToBoxYield'),
+    totalHours: sumField('regHours') + sumField('otHours'),
+  };
+
   function delta(raw, prevRaw, invert = false) {
     if (raw === null || raw === undefined || isNaN(raw) || prevRaw === null || prevRaw === undefined || isNaN(prevRaw) || prevRaw === 0) {
       return null;
@@ -213,6 +231,19 @@ export default function DashboardPage() {
                   d={delta(latest.employees, prev?.employees)} />
               </>
             )}
+          </div>
+
+          <div className="ledger-head">
+            <h2>Year to Date</h2>
+            <span className="ledger-count">{weeks.length} weeks</span>
+          </div>
+          <div className="hero-grid" style={{ marginBottom: '32px' }}>
+            <HeroCard label="Total Sales" value={fmtMoney(ytd.totalSales)} />
+            <HeroCard label="Total Cattle Purchase" value={fmtMoney(ytd.totalCattlePurchase)} />
+            <HeroCard label="Total Labor + Supply" value={fmtMoney(ytd.totalLaborSupply)} />
+            <HeroCard label="Total Profit / Loss" value={fmtMoney(ytd.totalProfit)} cls={ytd.totalProfit >= 0 ? 'pos' : 'neg'} />
+            <HeroCard label="Avg Live→Box Yield" value={fmtPct(ytd.avgYield)} />
+            <HeroCard label="Total Hours" value={fmtNum(ytd.totalHours)} />
           </div>
 
           <div className="panel">
