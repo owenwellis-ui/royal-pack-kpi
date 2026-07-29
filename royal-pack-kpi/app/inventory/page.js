@@ -7,12 +7,15 @@ import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
 
+const LOCATIONS = ['Freezer 1', 'Freezer 2', 'Freezer 3', 'Frontier'];
+const PRODUCT_COLORS = ['#D4AF37', '#3FA9F5', '#8AAB7E', '#F2EFE6', '#B08D57', '#C06A4A'];
+
 function fmtNum(v, d = 0) {
   if (v === null || v === undefined || isNaN(v)) return '—';
   return Number(v).toLocaleString('en-US', { maximumFractionDigits: d });
 }
 
-const emptyForm = { product: '', dateLabel: '', quantity: '', unit: 'lbs', editPassword: '' };
+const emptyForm = { product: '', location: LOCATIONS[0], dateLabel: '', quantity: '', unit: 'lbs', editPassword: '' };
 
 function todayLabel() {
   const d = new Date();
@@ -26,7 +29,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const [activeProduct, setActiveProduct] = useState(null);
+  const [activeLocation, setActiveLocation] = useState(LOCATIONS[0]);
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const router = useRouter();
@@ -35,56 +38,55 @@ export default function InventoryPage() {
     fetch('/api/inventory')
       .then((r) => r.json())
       .then((data) => {
-        const snaps = data.snapshots || [];
-        setSnapshots(snaps);
+        setSnapshots(data.snapshots || []);
         setLoading(false);
-        if (snaps.length > 0) {
-          setActiveProduct((prev) => prev || snaps[snaps.length - 1].product);
-        }
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const byProduct = {};
-  snapshots.forEach((s) => {
-    if (!byProduct[s.product]) byProduct[s.product] = [];
-    byProduct[s.product].push(s);
-  });
-  const products = Object.keys(byProduct).sort((a, b) => a.localeCompare(b));
+  const allProducts = [...new Set(snapshots.map((s) => s.product))].sort((a, b) => a.localeCompare(b));
+  const locationEntries = snapshots.filter((s) => s.location === activeLocation);
+  const productsInLocation = [...new Set(locationEntries.map((s) => s.product))].sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
-    if (!loading && activeProduct && byProduct[activeProduct]) {
+    if (!loading) {
       buildChart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots, activeProduct, loading]);
+  }, [snapshots, activeLocation, loading]);
 
   function buildChart() {
-    const entries = byProduct[activeProduct] || [];
     const ctx = canvasRef.current.getContext('2d');
     if (chartRef.current) chartRef.current.destroy();
     const gridColor = 'rgba(255,255,255,0.06)';
     const tickColor = '#98A0A5';
-    const unit = entries.length ? entries[entries.length - 1].unit : '';
+
+    const labels = [];
+    locationEntries.forEach((s) => {
+      if (!labels.includes(s.dateLabel)) labels.push(s.dateLabel);
+    });
+
+    const datasets = productsInLocation.map((product, idx) => {
+      const entries = locationEntries.filter((s) => s.product === product);
+      const valueByLabel = {};
+      entries.forEach((s) => { valueByLabel[s.dateLabel] = s.quantity; });
+      const color = PRODUCT_COLORS[idx % PRODUCT_COLORS.length];
+      return {
+        type: 'line',
+        label: product,
+        data: labels.map((l) => (valueByLabel[l] !== undefined ? valueByLabel[l] : null)),
+        borderColor: color,
+        backgroundColor: 'transparent',
+        pointBackgroundColor: color,
+        tension: 0.25,
+        pointRadius: 3,
+        borderWidth: 2.5,
+        spanGaps: true,
+      };
+    });
 
     chartRef.current = new Chart(ctx, {
-      data: {
-        labels: entries.map((e) => e.dateLabel),
-        datasets: [
-          {
-            type: 'line',
-            label: `${activeProduct} on hand (${unit})`,
-            data: entries.map((e) => e.quantity),
-            borderColor: '#D4AF37',
-            backgroundColor: 'rgba(212,175,55,0.12)',
-            pointBackgroundColor: '#D4AF37',
-            fill: true,
-            tension: 0.25,
-            pointRadius: 3,
-            borderWidth: 2.5,
-          },
-        ],
-      },
+      data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -96,7 +98,7 @@ export default function InventoryPage() {
         scales: {
           x: { ticks: { color: tickColor, font: { family: 'IBM Plex Mono', size: 10 }, maxRotation: 45, minRotation: 30 }, grid: { color: gridColor } },
           y: { ticks: { color: tickColor }, grid: { color: gridColor },
-            title: { display: true, text: unit, color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } },
+            title: { display: true, text: 'Quantity on hand', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } },
         },
       },
     });
@@ -109,7 +111,7 @@ export default function InventoryPage() {
   }
 
   function openModal() {
-    setForm({ ...emptyForm, dateLabel: todayLabel() });
+    setForm({ ...emptyForm, location: activeLocation, dateLabel: todayLabel() });
     setFormError('');
     setModalOpen(true);
   }
@@ -147,7 +149,7 @@ export default function InventoryPage() {
         return;
       }
       setSnapshots((prev) => [...prev, data.snapshot]);
-      setActiveProduct(data.snapshot.product);
+      setActiveLocation(data.snapshot.location);
       setForm(emptyForm);
       setModalOpen(false);
     } catch (err) {
@@ -156,8 +158,8 @@ export default function InventoryPage() {
     setSaving(false);
   }
 
-  const heroCards = products.map((p) => {
-    const entries = byProduct[p];
+  const heroCards = productsInLocation.map((product) => {
+    const entries = locationEntries.filter((s) => s.product === product);
     const latest = entries[entries.length - 1];
     const prevEntry = entries.length > 1 ? entries[entries.length - 2] : null;
     let delta = null;
@@ -166,10 +168,10 @@ export default function InventoryPage() {
       const pct = (diff / Math.abs(prevEntry.quantity)) * 100;
       delta = { diff, pct, arrow: diff >= 0 ? '▲' : '▼' };
     }
-    return { product: p, latest, delta };
+    return { product, latest, delta };
   });
 
-  const historyRows = [...snapshots].reverse();
+  const historyRows = [...locationEntries].reverse();
 
   return (
     <div className="wrap">
@@ -178,7 +180,7 @@ export default function InventoryPage() {
           <div className="eyebrow">Est. M6270 · Basin City, WA</div>
           <h1>Royal Pack — Inventory</h1>
           <div className="masthead-sub">
-            {loading ? 'Loading…' : `${products.length} product${products.length === 1 ? '' : 's'} tracked · ${snapshots.length} readings logged`}
+            {loading ? 'Loading…' : `${allProducts.length} product${allProducts.length === 1 ? '' : 's'} · ${snapshots.length} readings logged across all locations`}
           </div>
         </div>
         <div className="header-actions">
@@ -188,47 +190,49 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="loading-state">Loading inventory…</div>
-      ) : products.length === 0 ? (
-        <div className="loading-state">No inventory logged yet. Click "+ Log Reading" to add the first one.</div>
-      ) : (
-        <>
-          <div className="ledger-head">
-            <h2>On Hand</h2>
-            <span className="ledger-count">as of latest reading</span>
-          </div>
-          <div className="hero-grid" style={{ gridTemplateColumns: `repeat(${Math.min(products.length, 6)}, 1fr)`, marginBottom: '32px' }}>
-            {heroCards.map((c) => (
-              <div className="hero-card" key={c.product}>
-                <div className="hero-label">{c.product}</div>
-                <div className="hero-value">{fmtNum(c.latest.quantity, 1)} {c.latest.unit}</div>
-                <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.latest.dateLabel}</div>
-                {c.delta && (
-                  <div className={`hero-delta ${c.delta.diff >= 0 ? 'pos' : 'neg'}`}>
-                    {c.delta.arrow} {Math.abs(c.delta.pct).toFixed(1)}% vs last reading
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      <div className="panel" style={{ marginBottom: '32px' }}>
+        <div className="tab-row">
+          {LOCATIONS.map((loc) => (
+            <button key={loc} className={`tab-btn ${activeLocation === loc ? 'active' : ''}`} onClick={() => setActiveLocation(loc)}>
+              {loc}
+            </button>
+          ))}
+        </div>
 
-          <div className="panel">
-            <div className="tab-row">
-              {products.map((p) => (
-                <button key={p} className={`tab-btn ${activeProduct === p ? 'active' : ''}`} onClick={() => setActiveProduct(p)}>
-                  {p}
-                </button>
-              ))}
+        {loading ? (
+          <div className="loading-state">Loading inventory…</div>
+        ) : productsInLocation.length === 0 ? (
+          <div className="loading-state">No readings logged yet for {activeLocation}.</div>
+        ) : (
+          <>
+            <div style={{ padding: '20px 20px 0' }}>
+              <div className="hero-grid" style={{ gridTemplateColumns: `repeat(${Math.min(heroCards.length, 6)}, 1fr)` }}>
+                {heroCards.map((c) => (
+                  <div className="hero-card" key={c.product}>
+                    <div className="hero-label">{c.product}</div>
+                    <div className="hero-value">{fmtNum(c.latest.quantity, 1)} {c.latest.unit}</div>
+                    <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.latest.dateLabel}</div>
+                    {c.delta && (
+                      <div className={`hero-delta ${c.delta.diff >= 0 ? 'pos' : 'neg'}`}>
+                        {c.delta.arrow} {Math.abs(c.delta.pct).toFixed(1)}% vs last reading
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="chart-area">
               <canvas ref={canvasRef}></canvas>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
+      {!loading && productsInLocation.length > 0 && (
+        <>
           <div className="ledger-head">
-            <h2>Reading History</h2>
-            <span className="ledger-count">{snapshots.length} readings</span>
+            <h2>{activeLocation} — Reading History</h2>
+            <span className="ledger-count">{historyRows.length} readings</span>
           </div>
           <div className="ledger-scroll">
             <div className="ledger-row header-row" style={{ gridTemplateColumns: '34px 1fr 1fr 1fr' }}>
@@ -243,8 +247,7 @@ export default function InventoryPage() {
               </div>
             ))}
           </div>
-
-          <div className="footnote">Switch tabs above to see the trend for a specific product</div>
+          <div className="footnote">Switch the tabs above to see a different freezer/location</div>
         </>
       )}
 
@@ -252,7 +255,7 @@ export default function InventoryPage() {
         <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}>
           <div className="modal">
             <h3>Log Reading</h3>
-            <div className="modal-sub">Enter the current on-hand amount for a product. New product names create a new tracked item automatically.</div>
+            <div className="modal-sub">Enter the current on-hand amount for a product at a location. New product names create a new tracked item automatically.</div>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="field span2">
@@ -267,10 +270,23 @@ export default function InventoryPage() {
                     required
                   />
                   <datalist id="product-list">
-                    {products.map((p) => (
+                    {allProducts.map((p) => (
                       <option key={p} value={p} />
                     ))}
                   </datalist>
+                </div>
+                <div className="field">
+                  <label htmlFor="location">Location</label>
+                  <select
+                    id="location"
+                    value={form.location}
+                    onChange={(e) => updateField('location', e.target.value)}
+                    style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', padding: '9px 10px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', borderRadius: '2px' }}
+                  >
+                    {LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="field">
                   <label htmlFor="dateLabel">Date</label>
