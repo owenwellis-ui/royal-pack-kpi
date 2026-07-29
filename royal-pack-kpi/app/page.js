@@ -100,8 +100,8 @@ export default function DashboardPage() {
         { type: 'bar', label: 'Regular Hours', data: weeks.map((w) => w.regHours), backgroundColor: 'rgba(212,175,55,0.45)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
         { type: 'bar', label: 'Overtime Hours', data: weeks.map((w) => w.otHours), backgroundColor: 'rgba(110,104,96,0.55)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
         { type: 'line', label: 'Target (1500 hrs)', data: weeks.map(() => 1500), borderColor: '#C06A4A', borderDash: [5, 4], pointRadius: 0, yAxisID: 'y0', borderWidth: 1.5 },
-        { type: 'line', label: 'Labor % of Box Weight', data: weeks.map((w) => (w.laborPctBoxWeight != null ? w.laborPctBoxWeight * 100 : null)), borderColor: '#7EB6D9', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2.5, yAxisID: 'y1' },
-        { type: 'line', label: 'Employees', data: weeks.map((w) => w.employees), borderColor: '#F2EFE6', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2.5, yAxisID: 'y2' },
+        { type: 'line', label: 'Labor % of Box Weight', data: weeks.map((w) => (w.laborPctBoxWeight != null ? w.laborPctBoxWeight * 100 : null)), borderColor: '#3FA9F5', backgroundColor: 'transparent', pointBackgroundColor: '#3FA9F5', tension: 0.25, pointRadius: 2, borderWidth: 3, yAxisID: 'y1' },
+        { type: 'line', label: 'Employees', data: weeks.map((w) => w.employees), borderColor: '#FFFFFF', backgroundColor: 'transparent', pointBackgroundColor: '#FFFFFF', tension: 0.25, pointRadius: 2, borderWidth: 3, yAxisID: 'y2' },
       ];
       scales.y0 = { position: 'left', stacked: true, ticks: { color: tickColor }, grid: { color: gridColor },
         title: { display: true, text: 'Hours', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
