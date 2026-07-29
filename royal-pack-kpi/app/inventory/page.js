@@ -8,6 +8,7 @@ import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
 const LOCATIONS = ['Freezer 1', 'Freezer 2', 'Freezer 3', 'Frontier'];
+const TABS = [...LOCATIONS, 'Total'];
 const PRODUCT_COLORS = ['#D4AF37', '#3FA9F5', '#8AAB7E', '#F2EFE6', '#B08D57', '#C06A4A'];
 
 function fmtNum(v, d = 0) {
@@ -29,7 +30,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const [activeLocation, setActiveLocation] = useState(LOCATIONS[0]);
+  const [activeTab, setActiveTab] = useState(LOCATIONS[0]);
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const router = useRouter();
@@ -44,16 +45,22 @@ export default function InventoryPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  const isTotalView = activeTab === 'Total';
   const allProducts = [...new Set(snapshots.map((s) => s.product))].sort((a, b) => a.localeCompare(b));
-  const locationEntries = snapshots.filter((s) => s.location === activeLocation);
-  const productsInLocation = [...new Set(locationEntries.map((s) => s.product))].sort((a, b) => a.localeCompare(b));
+  const scopedEntries = isTotalView ? snapshots : snapshots.filter((s) => s.location === activeTab);
+  const productsInView = [...new Set(scopedEntries.map((s) => s.product))].sort((a, b) => a.localeCompare(b));
+
+  function latestForProductLocation(product, location) {
+    const arr = snapshots.filter((s) => s.product === product && s.location === location);
+    return arr.length ? arr[arr.length - 1] : null;
+  }
 
   useEffect(() => {
     if (!loading) {
       buildChart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots, activeLocation, loading]);
+  }, [snapshots, activeTab, loading]);
 
   function buildChart() {
     const ctx = canvasRef.current.getContext('2d');
@@ -62,19 +69,23 @@ export default function InventoryPage() {
     const tickColor = '#98A0A5';
 
     const labels = [];
-    locationEntries.forEach((s) => {
+    scopedEntries.forEach((s) => {
       if (!labels.includes(s.dateLabel)) labels.push(s.dateLabel);
     });
 
-    const datasets = productsInLocation.map((product, idx) => {
-      const entries = locationEntries.filter((s) => s.product === product);
-      const valueByLabel = {};
-      entries.forEach((s) => { valueByLabel[s.dateLabel] = s.quantity; });
+    const datasets = productsInView.map((product, idx) => {
       const color = PRODUCT_COLORS[idx % PRODUCT_COLORS.length];
+      const data = labels.map((label) => {
+        const matching = isTotalView
+          ? snapshots.filter((s) => s.product === product && s.dateLabel === label)
+          : scopedEntries.filter((s) => s.product === product && s.dateLabel === label);
+        if (!matching.length) return null;
+        return matching.reduce((sum, e) => sum + e.quantity, 0);
+      });
       return {
         type: 'line',
         label: product,
-        data: labels.map((l) => (valueByLabel[l] !== undefined ? valueByLabel[l] : null)),
+        data,
         borderColor: color,
         backgroundColor: 'transparent',
         pointBackgroundColor: color,
@@ -111,7 +122,7 @@ export default function InventoryPage() {
   }
 
   function openModal() {
-    setForm({ ...emptyForm, location: activeLocation, dateLabel: todayLabel() });
+    setForm({ ...emptyForm, location: isTotalView ? LOCATIONS[0] : activeTab, dateLabel: todayLabel() });
     setFormError('');
     setModalOpen(true);
   }
@@ -149,7 +160,7 @@ export default function InventoryPage() {
         return;
       }
       setSnapshots((prev) => [...prev, data.snapshot]);
-      setActiveLocation(data.snapshot.location);
+      setActiveTab(data.snapshot.location);
       setForm(emptyForm);
       setModalOpen(false);
     } catch (err) {
@@ -158,20 +169,29 @@ export default function InventoryPage() {
     setSaving(false);
   }
 
-  const heroCards = productsInLocation.map((product) => {
-    const entries = locationEntries.filter((s) => s.product === product);
-    const latest = entries[entries.length - 1];
-    const prevEntry = entries.length > 1 ? entries[entries.length - 2] : null;
-    let delta = null;
-    if (prevEntry && prevEntry.quantity !== 0) {
-      const diff = latest.quantity - prevEntry.quantity;
-      const pct = (diff / Math.abs(prevEntry.quantity)) * 100;
-      delta = { diff, pct, arrow: diff >= 0 ? '▲' : '▼' };
-    }
-    return { product, latest, delta };
-  });
+  const heroCards = isTotalView
+    ? productsInView.map((product) => {
+        const perLoc = LOCATIONS.map((loc) => ({ loc, entry: latestForProductLocation(product, loc) }));
+        const present = perLoc.filter((p) => p.entry);
+        const total = present.reduce((sum, p) => sum + p.entry.quantity, 0);
+        const unit = present.length ? present[present.length - 1].entry.unit : '';
+        const breakdown = present.map((p) => `${p.loc}: ${fmtNum(p.entry.quantity, 1)}`).join(' · ');
+        return { product, total, unit, breakdown };
+      })
+    : productsInView.map((product) => {
+        const entries = scopedEntries.filter((s) => s.product === product);
+        const latest = entries[entries.length - 1];
+        const prevEntry = entries.length > 1 ? entries[entries.length - 2] : null;
+        let delta = null;
+        if (prevEntry && prevEntry.quantity !== 0) {
+          const diff = latest.quantity - prevEntry.quantity;
+          const pct = (diff / Math.abs(prevEntry.quantity)) * 100;
+          delta = { diff, pct, arrow: diff >= 0 ? '▲' : '▼' };
+        }
+        return { product, latest, delta };
+      });
 
-  const historyRows = [...locationEntries].reverse();
+  const historyRows = [...scopedEntries].reverse();
 
   return (
     <div className="wrap">
@@ -192,33 +212,41 @@ export default function InventoryPage() {
 
       <div className="panel" style={{ marginBottom: '32px' }}>
         <div className="tab-row">
-          {LOCATIONS.map((loc) => (
-            <button key={loc} className={`tab-btn ${activeLocation === loc ? 'active' : ''}`} onClick={() => setActiveLocation(loc)}>
-              {loc}
+          {TABS.map((tab) => (
+            <button key={tab} className={`tab-btn ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
+              {tab}
             </button>
           ))}
         </div>
 
         {loading ? (
           <div className="loading-state">Loading inventory…</div>
-        ) : productsInLocation.length === 0 ? (
-          <div className="loading-state">No readings logged yet for {activeLocation}.</div>
+        ) : productsInView.length === 0 ? (
+          <div className="loading-state">No readings logged yet{isTotalView ? '' : ` for ${activeTab}`}.</div>
         ) : (
           <>
             <div style={{ padding: '20px 20px 0' }}>
               <div className="hero-grid" style={{ gridTemplateColumns: `repeat(${Math.min(heroCards.length, 6)}, 1fr)` }}>
-                {heroCards.map((c) => (
-                  <div className="hero-card" key={c.product}>
-                    <div className="hero-label">{c.product}</div>
-                    <div className="hero-value">{fmtNum(c.latest.quantity, 1)} {c.latest.unit}</div>
-                    <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.latest.dateLabel}</div>
-                    {c.delta && (
-                      <div className={`hero-delta ${c.delta.diff >= 0 ? 'pos' : 'neg'}`}>
-                        {c.delta.arrow} {Math.abs(c.delta.pct).toFixed(1)}% vs last reading
+                {isTotalView
+                  ? heroCards.map((c) => (
+                      <div className="hero-card" key={c.product}>
+                        <div className="hero-label">{c.product} — Total</div>
+                        <div className="hero-value">{fmtNum(c.total, 1)} {c.unit}</div>
+                        <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.breakdown}</div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    ))
+                  : heroCards.map((c) => (
+                      <div className="hero-card" key={c.product}>
+                        <div className="hero-label">{c.product}</div>
+                        <div className="hero-value">{fmtNum(c.latest.quantity, 1)} {c.latest.unit}</div>
+                        <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.latest.dateLabel}</div>
+                        {c.delta && (
+                          <div className={`hero-delta ${c.delta.diff >= 0 ? 'pos' : 'neg'}`}>
+                            {c.delta.arrow} {Math.abs(c.delta.pct).toFixed(1)}% vs last reading
+                          </div>
+                        )}
+                      </div>
+                    ))}
               </div>
             </div>
             <div className="chart-area">
@@ -228,26 +256,31 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {!loading && productsInLocation.length > 0 && (
+      {!loading && productsInView.length > 0 && (
         <>
           <div className="ledger-head">
-            <h2>{activeLocation} — Reading History</h2>
+            <h2>{isTotalView ? 'All Locations' : activeTab} — Reading History</h2>
             <span className="ledger-count">{historyRows.length} readings</span>
           </div>
           <div className="ledger-scroll">
-            <div className="ledger-row header-row" style={{ gridTemplateColumns: '34px 1fr 1fr 1fr' }}>
-              <span></span><span>Product</span><span>Date</span><span>On Hand</span>
+            <div className="ledger-row header-row" style={{ gridTemplateColumns: isTotalView ? '34px 1fr 1fr 1fr 1fr' : '34px 1fr 1fr 1fr' }}>
+              <span></span><span>Product</span>{isTotalView && <span>Location</span>}<span>Date</span><span>On Hand</span>
             </div>
             {historyRows.map((s) => (
-              <div className="ledger-row" key={s.id} style={{ gridTemplateColumns: '34px 1fr 1fr 1fr', cursor: 'default' }}>
+              <div className="ledger-row" key={s.id} style={{ gridTemplateColumns: isTotalView ? '34px 1fr 1fr 1fr 1fr' : '34px 1fr 1fr 1fr', cursor: 'default' }}>
                 <span className="tag-hole"></span>
                 <span className="cell-value">{s.product}</span>
+                {isTotalView && <span className="cell-value">{s.location}</span>}
                 <span className="tag-week">{s.dateLabel}</span>
                 <span className="cell-value">{fmtNum(s.quantity, 1)} {s.unit}</span>
               </div>
             ))}
           </div>
-          <div className="footnote">Switch the tabs above to see a different freezer/location</div>
+          <div className="footnote">
+            {isTotalView
+              ? 'Totals combine each location\'s most recent reading per product · trend line sums only readings logged on matching dates'
+              : 'Switch the tabs above to see a different freezer/location, or Total for the combined view'}
+          </div>
         </>
       )}
 
