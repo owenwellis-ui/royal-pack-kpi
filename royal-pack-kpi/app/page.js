@@ -82,9 +82,9 @@ export default function DashboardPage() {
         { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent',
           yAxisID: 'y1', pointRadius: 0, order: 3, borderWidth: 2.5 },
       ];
-      scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => '$' + v / 1000 + 'k' }, grid: { color: gridColor },
+      scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => '$' + Number((v / 1000).toFixed(1)) + 'k' }, grid: { color: gridColor },
         title: { display: true, text: 'Sales / Purchase ($)', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
-      scales.y1 = { position: 'right', ticks: { color: tickColor, callback: (v) => '$' + v / 1000 + 'k' }, grid: { display: false },
+      scales.y1 = { position: 'right', ticks: { color: tickColor, callback: (v) => '$' + Number((v / 1000).toFixed(1)) + 'k' }, grid: { display: false },
         title: { display: true, text: 'Profit / Loss ($)', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     } else if (activeTab === 'yield') {
       datasets = [
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         { type: 'line', label: 'Fab→Box Yield', data: weeks.map((w) => (w.fabBoxYield != null ? w.fabBoxYield * 100 : null)), borderColor: '#C9A227', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
         { type: 'line', label: 'Live→Box Yield', data: weeks.map((w) => (w.liveToBoxYield != null ? w.liveToBoxYield * 100 : null)), borderColor: '#C06A4A', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
       ];
-      scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => v + '%' }, grid: { color: gridColor },
+      scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => Number(v.toFixed(2)) + '%' }, grid: { color: gridColor },
         title: { display: true, text: 'Yield %', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     } else if (activeTab === 'labor') {
       datasets = [
@@ -103,7 +103,7 @@ export default function DashboardPage() {
       ];
       scales.y0 = { position: 'left', stacked: true, ticks: { color: tickColor }, grid: { color: gridColor },
         title: { display: true, text: 'Hours', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
-      scales.y1 = { position: 'right', ticks: { color: tickColor, callback: (v) => v + '%' }, grid: { display: false },
+      scales.y1 = { position: 'right', ticks: { color: tickColor, callback: (v) => Number(v.toFixed(2)) + '%' }, grid: { display: false },
         title: { display: true, text: 'Labor % of Box Wt', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     }
 
