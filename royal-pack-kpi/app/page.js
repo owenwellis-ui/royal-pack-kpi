@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
@@ -242,6 +243,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="header-actions">
+          <Link href="/inventory" className="logout-btn" style={{ textDecoration: 'none' }}>Inventory →</Link>
           <button className="logout-btn" onClick={handleLogout}>Log out</button>
           <button className="add-week-btn" onClick={openAddModal}>+ Add Week</button>
         </div>
