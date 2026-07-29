@@ -78,7 +78,7 @@ export default function DashboardPage() {
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2 },
         { type: 'line', label: 'Cattle Purchase', data: weeks.map((w) => w.cattlePurchase), borderColor: '#7C93A8', backgroundColor: 'transparent',
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2, borderDash: [4, 3] },
-        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent', yAxisID: 'y1', pointRadius: 0, order: 0, borderWidth: 2.5 },
+        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent', yAxisID: 'y1', pointRadius: 0, order: 3, borderWidth: 2.5 },
       ];
       scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => '$' + v / 1000 + 'k' }, grid: { color: gridColor },
         title: { display: true, text: 'Sales / Purchase ($)', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
