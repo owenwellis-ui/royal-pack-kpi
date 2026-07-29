@@ -6,6 +6,10 @@ export async function PATCH(request, { params }) {
   const { id } = params;
   const body = await request.json();
 
+  if (body.editPassword !== process.env.EDIT_PASSWORD) {
+    return NextResponse.json({ error: 'Incorrect edit password' }, { status: 401 });
+  }
+
   if (!(body.week || '').trim()) {
     return NextResponse.json({ error: 'Week label is required' }, { status: 400 });
   }
