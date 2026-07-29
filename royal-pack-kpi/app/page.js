@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const router = useRouter();
@@ -135,8 +136,9 @@ export default function DashboardPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/weeks', {
-        method: 'POST',
+      const isEdit = editingId !== null;
+      const res = await fetch(isEdit ? `/api/weeks/${editingId}` : '/api/weeks', {
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -146,13 +148,47 @@ export default function DashboardPage() {
         setSaving(false);
         return;
       }
-      setWeeks((prev) => [...prev, data.week]);
+      if (isEdit) {
+        setWeeks((prevWeeks) => prevWeeks.map((w) => (w.id === editingId ? data.week : w)));
+      } else {
+        setWeeks((prevWeeks) => [...prevWeeks, data.week]);
+      }
       setForm(emptyForm);
+      setEditingId(null);
       setModalOpen(false);
     } catch (err) {
       setFormError('Something went wrong. Try again.');
     }
     setSaving(false);
+  }
+
+  function openAddModal() {
+    setForm(emptyForm);
+    setEditingId(null);
+    setFormError('');
+    setModalOpen(true);
+  }
+
+  function openEditModal(w) {
+    setForm({
+      week: w.week || '',
+      sales: w.sales ?? '',
+      cattlePurchase: w.cattlePurchase ?? '',
+      laborCost: w.laborCost ?? '',
+      supplyCost: w.supplyCost ?? '',
+      gradedCattle: w.gradedCattle ?? '',
+      hospitalCows: w.hospitalCows ?? '',
+      employees: w.employees ?? '',
+      boxWeight: w.boxWeight ?? '',
+      regHours: w.regHours ?? '',
+      otHours: w.otHours ?? '',
+      liveHotYield: w.liveHotYield != null ? +(w.liveHotYield * 100).toFixed(2) : '',
+      fabBoxYield: w.fabBoxYield != null ? +(w.fabBoxYield * 100).toFixed(2) : '',
+      liveToBoxYield: w.liveToBoxYield != null ? +(w.liveToBoxYield * 100).toFixed(2) : '',
+    });
+    setEditingId(w.id);
+    setFormError('');
+    setModalOpen(true);
   }
 
   function updateField(key, value) {
@@ -203,7 +239,7 @@ export default function DashboardPage() {
         </div>
         <div className="header-actions">
           <button className="logout-btn" onClick={handleLogout}>Log out</button>
-          <button className="add-week-btn" onClick={() => setModalOpen(true)}>+ Add Week</button>
+          <button className="add-week-btn" onClick={openAddModal}>+ Add Week</button>
         </div>
       </div>
 
@@ -298,6 +334,14 @@ export default function DashboardPage() {
                     <DetailItem k="Overtime Hours" v={fmtNum(w.otHours, 1)} />
                     <DetailItem k="Labor % of Box Wt" v={fmtPct(w.laborPctBoxWeight)} />
                     <DetailItem k="Source" v={w.source === 'added' ? 'Added by you' : '2026 ledger'} />
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ gridColumn: '1 / -1', justifySelf: 'start' }}
+                      onClick={(e) => { e.stopPropagation(); openEditModal(w); }}
+                    >
+                      Edit this week
+                    </button>
                   </div>
                 </div>
               );
@@ -311,8 +355,12 @@ export default function DashboardPage() {
       {modalOpen && (
         <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}>
           <div className="modal">
-            <h3>Add Week</h3>
-            <div className="modal-sub">Enter raw weekly figures — profit, total hours, and labor-per-box are calculated for you.</div>
+            <h3>{editingId !== null ? 'Edit Week' : 'Add Week'}</h3>
+            <div className="modal-sub">
+              {editingId !== null
+                ? 'Update any figures below — profit, total hours, and labor-per-box recalculate automatically.'
+                : 'Enter raw weekly figures — profit, total hours, and labor-per-box are calculated for you.'}
+            </div>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <Field span2 label="Week label" placeholder="e.g. 7/27-7/31" value={form.week} onChange={(v) => updateField('week', v)} required />
@@ -334,7 +382,9 @@ export default function DashboardPage() {
               {formError && <div className="form-error">{formError}</div>}
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save week'}</button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Saving…' : editingId !== null ? 'Save changes' : 'Save week'}
+                </button>
               </div>
             </form>
           </div>
