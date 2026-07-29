@@ -64,13 +64,14 @@ export default function InventoryPage() {
   }
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && productsInView.length > 0) {
       buildChart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshots, activeTab, loading]);
 
   function buildChart() {
+    if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (chartRef.current) chartRef.current.destroy();
     const gridColor = 'rgba(255,255,255,0.06)';
