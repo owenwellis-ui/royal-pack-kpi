@@ -16,7 +16,15 @@ function fmtNum(v, d = 0) {
   return Number(v).toLocaleString('en-US', { maximumFractionDigits: d });
 }
 
-const emptyForm = { product: '', location: LOCATIONS[0], dateLabel: '', quantity: '', unit: 'lbs', editPassword: '' };
+function fmtOnHand(caseCount, quantity, unit) {
+  const qtyStr = `${fmtNum(quantity, 1)} ${unit}`;
+  if (caseCount !== null && caseCount !== undefined && !isNaN(caseCount)) {
+    return `${fmtNum(caseCount, 0)} cases · ${qtyStr}`;
+  }
+  return qtyStr;
+}
+
+const emptyForm = { product: '', location: LOCATIONS[0], dateLabel: '', caseCount: '', quantity: '', unit: 'lbs', editPassword: '' };
 
 function todayLabel() {
   const d = new Date();
@@ -174,9 +182,11 @@ export default function InventoryPage() {
         const perLoc = LOCATIONS.map((loc) => ({ loc, entry: latestForProductLocation(product, loc) }));
         const present = perLoc.filter((p) => p.entry);
         const total = present.reduce((sum, p) => sum + p.entry.quantity, 0);
+        const anyCases = present.some((p) => p.entry.caseCount !== null && p.entry.caseCount !== undefined);
+        const totalCases = anyCases ? present.reduce((sum, p) => sum + (p.entry.caseCount || 0), 0) : null;
         const unit = present.length ? present[present.length - 1].entry.unit : '';
-        const breakdown = present.map((p) => `${p.loc}: ${fmtNum(p.entry.quantity, 1)}`).join(' · ');
-        return { product, total, unit, breakdown };
+        const breakdown = present.map((p) => `${p.loc}: ${fmtOnHand(p.entry.caseCount, p.entry.quantity, p.entry.unit)}`).join(' · ');
+        return { product, total, totalCases, unit, breakdown };
       })
     : productsInView.map((product) => {
         const entries = scopedEntries.filter((s) => s.product === product);
@@ -231,14 +241,14 @@ export default function InventoryPage() {
                   ? heroCards.map((c) => (
                       <div className="hero-card" key={c.product}>
                         <div className="hero-label">{c.product} — Total</div>
-                        <div className="hero-value">{fmtNum(c.total, 1)} {c.unit}</div>
+                        <div className="hero-value">{fmtOnHand(c.totalCases, c.total, c.unit)}</div>
                         <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.breakdown}</div>
                       </div>
                     ))
                   : heroCards.map((c) => (
                       <div className="hero-card" key={c.product}>
                         <div className="hero-label">{c.product}</div>
-                        <div className="hero-value">{fmtNum(c.latest.quantity, 1)} {c.latest.unit}</div>
+                        <div className="hero-value">{fmtOnHand(c.latest.caseCount, c.latest.quantity, c.latest.unit)}</div>
                         <div className="hero-delta" style={{ color: 'var(--text-faint)' }}>{c.latest.dateLabel}</div>
                         {c.delta && (
                           <div className={`hero-delta ${c.delta.diff >= 0 ? 'pos' : 'neg'}`}>
@@ -272,7 +282,7 @@ export default function InventoryPage() {
                 <span className="cell-value">{s.product}</span>
                 {isTotalView && <span className="cell-value">{s.location}</span>}
                 <span className="tag-week">{s.dateLabel}</span>
-                <span className="cell-value">{fmtNum(s.quantity, 1)} {s.unit}</span>
+                <span className="cell-value">{fmtOnHand(s.caseCount, s.quantity, s.unit)}</span>
               </div>
             ))}
           </div>
@@ -330,6 +340,16 @@ export default function InventoryPage() {
                     value={form.dateLabel}
                     onChange={(e) => updateField('dateLabel', e.target.value)}
                     required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="caseCount">Cases (optional)</label>
+                  <input
+                    id="caseCount"
+                    type="number"
+                    step="1"
+                    value={form.caseCount}
+                    onChange={(e) => updateField('caseCount', e.target.value)}
                   />
                 </div>
                 <div className="field">
