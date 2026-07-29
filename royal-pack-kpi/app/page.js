@@ -76,11 +76,11 @@ export default function DashboardPage() {
         { type: 'bar', label: 'Profit / Loss', data: weeks.map((w) => w.profit),
           backgroundColor: weeks.map((w) => (w.profit >= 0 ? 'rgba(138,171,126,0.55)' : 'rgba(192,106,74,0.55)')),
           yAxisID: 'y1', order: 2, borderRadius: 2 },
-        { type: 'line', label: 'Total Sales', data: weeks.map((w) => w.sales), borderColor: '#C9A227', backgroundColor: 'transparent',
+        { type: 'line', label: 'Total Sales', data: weeks.map((w) => w.sales), borderColor: '#D4AF37', backgroundColor: 'transparent',
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2 },
-        { type: 'line', label: 'Cattle Purchase', data: weeks.map((w) => w.cattlePurchase), borderColor: '#7C93A8', backgroundColor: 'transparent',
+        { type: 'line', label: 'Cattle Purchase', data: weeks.map((w) => w.cattlePurchase), borderColor: '#B08D57', backgroundColor: 'transparent',
           yAxisID: 'y0', tension: 0.25, pointRadius: 2, order: 1, borderWidth: 2, borderDash: [4, 3] },
-        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#EDEAE4', backgroundColor: 'transparent',
+        { type: 'line', label: 'Break-even ($0)', data: weeks.map(() => 0), borderColor: '#F2EFE6', backgroundColor: 'transparent',
           yAxisID: 'y1', pointRadius: 0, order: 3, borderWidth: 2.5 },
       ];
       scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => '$' + Number((v / 1000).toFixed(1)) + 'k' }, grid: { color: gridColor },
@@ -89,18 +89,18 @@ export default function DashboardPage() {
         title: { display: true, text: 'Profit / Loss ($)', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     } else if (activeTab === 'yield') {
       datasets = [
-        { type: 'line', label: 'Live→Hot Yield', data: weeks.map((w) => (w.liveHotYield != null ? w.liveHotYield * 100 : null)), borderColor: '#8AAB7E', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
-        { type: 'line', label: 'Fab→Box Yield', data: weeks.map((w) => (w.fabBoxYield != null ? w.fabBoxYield * 100 : null)), borderColor: '#C9A227', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
-        { type: 'line', label: 'Live→Box Yield', data: weeks.map((w) => (w.liveToBoxYield != null ? w.liveToBoxYield * 100 : null)), borderColor: '#C06A4A', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
+        { type: 'line', label: 'Live→Hot Yield', data: weeks.map((w) => (w.liveHotYield != null ? w.liveHotYield * 100 : null)), borderColor: '#D4AF37', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
+        { type: 'line', label: 'Fab→Box Yield', data: weeks.map((w) => (w.fabBoxYield != null ? w.fabBoxYield * 100 : null)), borderColor: '#B08D57', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
+        { type: 'line', label: 'Live→Box Yield', data: weeks.map((w) => (w.liveToBoxYield != null ? w.liveToBoxYield * 100 : null)), borderColor: '#F2EFE6', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y0' },
       ];
       scales.y0 = { position: 'left', ticks: { color: tickColor, callback: (v) => Number(v.toFixed(2)) + '%' }, grid: { color: gridColor },
         title: { display: true, text: 'Yield %', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
     } else if (activeTab === 'labor') {
       datasets = [
-        { type: 'bar', label: 'Regular Hours', data: weeks.map((w) => w.regHours), backgroundColor: 'rgba(124,147,168,0.6)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
-        { type: 'bar', label: 'Overtime Hours', data: weeks.map((w) => w.otHours), backgroundColor: 'rgba(201,162,39,0.6)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
+        { type: 'bar', label: 'Regular Hours', data: weeks.map((w) => w.regHours), backgroundColor: 'rgba(212,175,55,0.55)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
+        { type: 'bar', label: 'Overtime Hours', data: weeks.map((w) => w.otHours), backgroundColor: 'rgba(139,111,44,0.7)', stack: 'hrs', yAxisID: 'y0', borderRadius: 1 },
         { type: 'line', label: 'Target (1500 hrs)', data: weeks.map(() => 1500), borderColor: '#C06A4A', borderDash: [5, 4], pointRadius: 0, yAxisID: 'y0', borderWidth: 1.5 },
-        { type: 'line', label: 'Labor % of Box Weight', data: weeks.map((w) => (w.laborPctBoxWeight != null ? w.laborPctBoxWeight * 100 : null)), borderColor: '#EDEAE4', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' },
+        { type: 'line', label: 'Labor % of Box Weight', data: weeks.map((w) => (w.laborPctBoxWeight != null ? w.laborPctBoxWeight * 100 : null)), borderColor: '#F2EFE6', backgroundColor: 'transparent', tension: 0.25, pointRadius: 2, borderWidth: 2, yAxisID: 'y1' },
       ];
       scales.y0 = { position: 'left', stacked: true, ticks: { color: tickColor }, grid: { color: gridColor },
         title: { display: true, text: 'Hours', color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } } };
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { labels: { color: '#EDEAE4', font: { family: 'Inter', size: 11 } } },
+          legend: { labels: { color: '#F2EFE6', font: { family: 'Inter', size: 11 } } },
           tooltip: { titleFont: { family: 'IBM Plex Mono' }, bodyFont: { family: 'IBM Plex Mono' } },
         },
         scales,
