@@ -19,6 +19,10 @@ export async function GET() {
 export async function POST(request) {
   const body = await request.json();
 
+  if (body.editPassword !== process.env.EDIT_PASSWORD) {
+    return NextResponse.json({ error: 'Incorrect edit password' }, { status: 401 });
+  }
+
   if (!(body.week || '').trim()) {
     return NextResponse.json({ error: 'Week label is required' }, { status: 400 });
   }
