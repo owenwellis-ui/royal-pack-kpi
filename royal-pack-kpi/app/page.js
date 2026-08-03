@@ -22,6 +22,11 @@ function fmtNum(v, d = 0) {
   return Number(v).toLocaleString('en-US', { maximumFractionDigits: d });
 }
 
+function hotToBox(w) {
+  if (w.liveToBoxYield == null || w.liveHotYield == null || w.liveHotYield === 0) return null;
+  return w.liveToBoxYield / w.liveHotYield;
+}
+
 const emptyForm = {
   week: '', sales: '', cattlePurchase: '', laborCost: '', supplyCost: '',
   gradedCattle: '', hospitalCows: '', employees: '', boxWeight: '',
@@ -206,17 +211,16 @@ export default function DashboardPage() {
   function sumField(key) {
     return weeks.reduce((acc, w) => acc + (w[key] || 0), 0);
   }
-  function avgField(key) {
-    const vals = weeks.map((w) => w[key]).filter((v) => v !== null && v !== undefined && !isNaN(v));
-    if (!vals.length) return null;
-    return vals.reduce((a, b) => a + b, 0) / vals.length;
-  }
   const ytd = {
     totalSales: sumField('sales'),
     totalCattlePurchase: sumField('cattlePurchase'),
     totalLaborSupply: sumField('laborCost') + sumField('supplyCost'),
     totalProfit: sumField('profit'),
-    avgYield: avgField('liveToBoxYield'),
+    avgYield: (() => {
+      const vals = weeks.map((w) => hotToBox(w)).filter((v) => v !== null && v !== undefined && !isNaN(v));
+      if (!vals.length) return null;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    })(),
     totalHours: sumField('regHours') + sumField('otHours'),
   };
 
@@ -263,8 +267,8 @@ export default function DashboardPage() {
                   d={delta(latest.sales, prev?.sales)} />
                 <HeroCard label="Cattle Purchase $" value={fmtMoney(latest.cattlePurchase)}
                   d={delta(latest.cattlePurchase, prev?.cattlePurchase, true)} />
-                <HeroCard label="Live→Box Yield" value={fmtPct(latest.liveToBoxYield)}
-                  d={delta(latest.liveToBoxYield, prev?.liveToBoxYield)} />
+                <HeroCard label="Hot→Box Yield" value={fmtPct(hotToBox(latest))}
+                  d={delta(hotToBox(latest), prev ? hotToBox(prev) : null)} />
                 <HeroCard label="Total Hours (Tgt 1500)"
                   value={fmtNum((latest.regHours || 0) + (latest.otHours || 0))}
                   cls={(latest.regHours || 0) + (latest.otHours || 0) > 1500 ? 'neg' : 'pos'}
@@ -284,7 +288,7 @@ export default function DashboardPage() {
             <HeroCard label="Total Cattle Purchase" value={fmtMoney(ytd.totalCattlePurchase)} />
             <HeroCard label="Total Labor + Supply" value={fmtMoney(ytd.totalLaborSupply)} />
             <HeroCard label="Total Profit / Loss" value={fmtMoney(ytd.totalProfit)} cls={ytd.totalProfit >= 0 ? 'pos' : 'neg'} />
-            <HeroCard label="Avg Live→Box Yield" value={fmtPct(ytd.avgYield)} />
+            <HeroCard label="Avg Hot→Box Yield" value={fmtPct(ytd.avgYield)} />
             <HeroCard label="Total Hours" value={fmtNum(ytd.totalHours)} />
           </div>
 
@@ -324,7 +328,7 @@ export default function DashboardPage() {
                     <span className="cell-value">{fmtMoney(w.sales)}</span>
                     <span className="cell-value">{fmtMoney(w.cattlePurchase)}</span>
                     <span className={`cell-value ${w.profit >= 0 ? 'pos' : 'neg'}`}>{fmtMoney(w.profit)}</span>
-                    <span className="cell-value">{fmtPct(w.liveToBoxYield)}</span>
+                    <span className="cell-value">{fmtPct(hotToBox(w))}</span>
                     <span className={`cell-value ${totalHrs > 1500 ? 'neg' : ''}`}>{fmtNum(totalHrs)}</span>
                   </div>
                   <div className={`detail-row ${isOpen ? 'open' : ''}`}>
